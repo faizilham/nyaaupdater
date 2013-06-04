@@ -2,27 +2,7 @@
 nyaa.eu html parser
 Faiz Ilham (faizilham.com) 2013
 
-library functions:
-1)	fetch(url, regexPattern)
-	connect to url (nyaa.eu search url) and fetch result by regexPattern using NyaaParser
-	the result will be a list of tuple (filename, link)
-2)	download(url, filename)
-	download from url as filename
-
-how to use NyaaParser:
-1) 	build a NyaaParser object
-	parser = NyaaParser(regexPattern [, parseAll=True])
-	
-	regexPattern is used to identify which search result should be taken
-	parseAll is used to check whether feth all result or not. if it is False, NyaaParser only fetch the first result.
-	
-2)	feed with a nyaa.eu search result page (html)
-	parser.feed(nyaaPage)
-	
-3)	fetch the result
-	result = parser.result
-	
-	the result will be a list of tuple (filename, link)
+Fetching and parsing nyaa.eu search
 """
 
 import urllib
@@ -30,9 +10,11 @@ import urllib2
 import re
 from HTMLParser import HTMLParser
 
+# download from url
 def download(url, filename):
 	urllib.urlretrieve(url, filename)
 
+# fetch from url, return list of tuples (filename, links)
 def fetch(url, pattern):
 	try:
 		handler = urllib2.urlopen(url)
