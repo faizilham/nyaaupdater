@@ -1,5 +1,7 @@
 """
-nyaa feed database manager
+Nyaa.eu Feed Updater
+
+Nyaa Feed Database Manager
 Faiz Ilham (faizilham.com) 2013
 
 Manages feed database.
@@ -16,7 +18,7 @@ class NyaaDB:
 		self.data = {}
 		for ln in f:
 			line = ln.strip()
-			if(len(line)>0 and line[0]!="#"): # if not empty lines and comment
+			if(len(line)>0 and line[0] != "#"): # if not empty lines and comment
 				entry = line.split(",")
 				for i in range(len(entry)): entry[i] = entry[i].strip()
 				key = entry.pop(0)
@@ -45,7 +47,7 @@ class NyaaDB:
 				del self.data[e]
 			self.write()
 	
-	# write changes to database. auto-called by add, update and delete
+	# write changes to database. auto-called by add, update, and delete
 	def write(self):
 		f = open(self.DB_NAME, "w")
 		for key, val in self.data.items():
@@ -54,3 +56,4 @@ class NyaaDB:
 			f.write(val[1] + ",")
 			f.write(val[2] + "\n")
 		f.close()
+
