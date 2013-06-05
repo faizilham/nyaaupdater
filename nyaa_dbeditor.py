@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """
 dbeditor
+(not yet tested in windows!)
 """
+
 from Tkinter import *
 from nyaa_db import NyaaDB
 import tkSimpleDialog
@@ -117,5 +119,7 @@ class App:
 root = Tk()
 root.wm_title("Nyaa Feed Database Editor")
 root.resizable(width=FALSE, height=FALSE)
+img = PhotoImage(file='icon.gif')
+root.tk.call('wm', 'iconphoto', root._w, img)
 app = App(root)
 root.mainloop()
