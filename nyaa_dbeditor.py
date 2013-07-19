@@ -5,11 +5,11 @@ dbeditor
 """
 
 from Tkinter import *
-from nyaa_db import NyaaDB
+from nyaa_db import NyaaDB, NyaaSQLiteDB
 import tkSimpleDialog
 import tkMessageBox
 
-db = NyaaDB()
+db = NyaaSQLiteDB()
 data = db.load()
 
 class App:
@@ -61,7 +61,7 @@ class App:
 		if key and not db.data.get(key):
 			db.add({key : ["NONE", "NONE", "NONE"]})
 			self.update_list()
-			i = sorted(db.data.keys(), key=str.lower).index(key)
+			i = sorted(db.data.keys()).index(key)
 			self.listbox.select_set(i)
 			self.show_entry(i)
 			
@@ -113,7 +113,7 @@ class App:
 
 	def update_list(self):
 		self.listbox.delete(0, END)
-		for e in sorted(db.data.keys(), key=str.lower):
+		for e in sorted(db.data.keys()):
 			self.listbox.insert(END, e)
 
 root = Tk()

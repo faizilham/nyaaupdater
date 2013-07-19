@@ -1,3 +1,5 @@
 *.pyc
 *.torrent
 *.csv
+*.db
+ignore
