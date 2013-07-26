@@ -28,7 +28,7 @@ def fetch(url, pattern):
 
 # parse xml data and build the list of feed dictionary
 def parse(raw_xml_string, pattern):
-	channel = ElementTree.fromstring(raw_xml_data).find('channel')
+	channel = ElementTree.fromstring(raw_xml_string).find('channel')
 	result = []
 	for item in channel.findall('item'):
 		name = item.find('title').text				# filename
