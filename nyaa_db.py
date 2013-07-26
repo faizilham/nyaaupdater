@@ -86,6 +86,8 @@ class NyaaSQLiteDB:
 		conn.commit()
 		if(self.autoclose): self.close()
 		
+		return self.data
+		
 	def add(self, new_data):
 		conn = self.connect()
 		ndata = []
