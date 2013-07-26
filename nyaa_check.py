@@ -9,7 +9,7 @@ Check torrent updates and download if applicable.
 """
 
 from nyaa_parser import fetch, download
-from nyaa_db import NyaaDB
+from nyaa_db import NyaaSQLiteDB
 
 # checker, viewer, and prompter
 def checkUpdate(res):
@@ -19,19 +19,19 @@ def checkUpdate(res):
 		ret = fetch(val[0], val[1])
 		if (ret):
 			n = 0
-			while(n < len(ret) and ret[n][0] != val[2]):
-				links.append((ret[n][1], ret[n][0] + ".torrent"))
+			while(n < len(ret) and ret[n]['name'] != val[2]):
+				links.append((ret[n]['link'], ret[n]['name'] + ".torrent"))
 				n = n + 1
 			if (n == 0): print key, "is already updated"
 			else:
-				updates[key] = [None, None, ret[0][0]]
+				updates[key] = [None, None, ret[0]['name']]
 				print key, "has", n, "new update(s)!"
-				for i in range(n): print ret[i][0]
+				for i in range(n): print ret[i]['name']
 		print
 	return links, updates
 
 # create and load database object to be checked
-db = NyaaDB()
+db = NyaaSQLiteDB()
 links, updates = checkUpdate(db.load())
 n = len(links)
 
