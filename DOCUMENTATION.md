@@ -1,28 +1,21 @@
 Documentation
 =============
 
-`nyaa_parser.py`: Fetching and parsing Nyaa.eu html page.
-
-Library Function
+Nyaa Parser
 ----------------
+
+`nyaa_parser.py`: Fetching and parsing Nyaa.eu html page.
 
 1. `fetch(url, regexPattern)`
    - Connect to URL (Nyaa.eu search URL) and fetch result by `regexPattern` using `NyaaParser`.
-   - The result will be a list of tuple (`filename`, `link`).
+   - The result will be a list of dictionary {`name`, `link`, `page`, `desc`, `date`}.
 2. `download(url, filename)`
    - Download from URL as `filename`.
+3. `parse(raw_xml_string, regexPattern)`
+   - Parsing raw xml data to build the feed dictionary
 
-Using NyaaParser on your own
-
-1. Build a NyaaParser object
-   - `parser = NyaaParser(regexPattern [, parseAll=True])`
-   - `regexPattern` is used to identify which search result should be taken.
-   - `parseAll` is used to check whether fetch all result or not. If it is `False`, `NyaaParser` only fetch the first result.
-2. Feed with a Nyaa.eu search result page (HTML)
-   - `parser.feed(nyaaPage)`
-3. Fetch the result
-   - `result = parser.result`
-   - The result will be a list of tuple (`filename`, `link`)
+Nyaa DB
+-----
 
 `nyaa_db.py`: Manage feed database.
 
@@ -33,12 +26,11 @@ The feed database (`nyaa_checklist.csv`) is a comma-seperated values of:
 - `regex_pattern`: Regex pattern of desired result.
 - `last_downloaded`: The last downloaded file's name, without `.torrent` extension.
 
-Usage
------
 
 1. Building a NyaaDB object
    - You may use a custom file as long as it is consistent with the format above.
    - `db = NyaaDB()`
+   - You may also use a sqlite file (`nyaa_checklist.db`) by using `db = NyaaSQLiteDB()`
 
 2. Load the database
    - `db.load()`
