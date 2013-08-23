@@ -23,21 +23,38 @@ class DownloadJob(Thread):
 		self.links = links
 		
 	def run(self):
-		for link in self.links:
-			filename, url = DOWNLOAD_DIR + link[1] + ".torrent", link[2]
+		while len(self.links) > 0:
+			
+			link = None
+			
+			# get download info
+			
+			try:
+				job_lock.acquire()
+				if len(self.links) > 0: 
+					link = self.links.pop(0)
+				else: break
+				
+				filename, url = DOWNLOAD_DIR + link[1] + ".torrent", link[2]
+				print "downloading", link[1]
+			finally:
+				job_lock.release()
+			
+			
+			# try download
+			success = download(url, filename, 7)
 			
 			job_lock.acquire()
-			print "downloading", link[1]
-			job_lock.release()
 			
-			if download(url, filename, 20):
-				job_lock.acquire()
+			if success:
 				print "finished downloading", link[1]
-				job_lock.release()
 			else:
-				job_lock.acquire()
-				print "connection error on downloading", link[1]
-				job_lock.release()
+				
+				# assume not yet downloaded
+				print "connection error on downloading {0}, retrying later".format(link[1])
+				links.append(link)
+				
+			job_lock.release()
 
 class UpdaterJob(Thread):
 	def __init__(self, db):
@@ -51,11 +68,13 @@ class UpdaterJob(Thread):
 		while len(self.db) > 0:
 			
 			# get an unchecked series
-			job_lock.acquire()
-			if len(self.db) > 0: 
-				series, val = self.db.popitem()
-			else: break
-			job_lock.release()
+			try:
+				job_lock.acquire()
+				if len(self.db) > 0: 
+					series, val = self.db.popitem()
+				else: break
+			finally:
+				job_lock.release()
 			
 			url, pattern, last = val[0], val[1], val[2]
 			
@@ -64,7 +83,7 @@ class UpdaterJob(Thread):
 			job_lock.release()
 			
 			# try get the online feeds
-			feeds = fetch(url, pattern, retry_num=7, info_name=(series if VERBOSE else None))
+			feeds = fetch(url, pattern, retry_num=7)
 			
 			
 			if (feeds): # if success
@@ -100,23 +119,14 @@ def db_updates(db, links, updates):
 	
 	db.update(updates) # update `series` table
 	
-	# divide .torrent downloads into NUM_DOWNLOADER threads
+	# starts download
 	
-	item_per_job = len(links) / NUM_DOWNLOADER + (0 if len(links) % NUM_DOWNLOADER == 0 else 1)
+	jobs = []
 	
-	temp, jobs = [], []
-	n, total = 0, 0
-	
-	for link in links:
-		temp.append(link)
-		n, total = n + 1, total + 1
-		
-		if(n==item_per_job or total == len(links)):
-			n = 0
-			job = DownloadJob(temp)
-			jobs.append(job)
-			job.start()
-			temp = []
+	for i in range(NUM_DOWNLOADER):
+		job = DownloadJob(links)
+		jobs.append(job)
+		job.start()
 	
 	for job in jobs:
 		job.join()
@@ -125,7 +135,9 @@ def db_updates(db, links, updates):
 	
 
 def update(db):
-	data = db.load()
+	data = db.load() # load database
+		
+	# starts update check
 	
 	temp, jobs = data.copy(), []
 	
@@ -146,10 +158,9 @@ def update(db):
 
 if __name__ == "__main__":
 	db = NyaaSQLiteDB(DBNAME)
-	links, updates = update(db)
-	print
-	
+	links, updates = update(db)	
 	if (links):
+		print
 		print len(links), "new updates found, download all? [y/n]",
 		var = raw_input()
 		if var in ['y', 'Y']:
