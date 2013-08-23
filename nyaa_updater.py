@@ -7,14 +7,13 @@ Faiz Ilham (faizilham.com) 2013
 
 from nyaa_parser import fetch, download
 from nyaa_db import NyaaSQLiteDB
-from threading import Thread, Lock
+from threading import Thread
+import os, stat
 
-DBNAME = 'nyaa_checklist.db'
-DOWNLOAD_DIR = ''
+DBNAME = '/home/pi/db/nyaa.db'
+DOWNLOAD_DIR = '/home/pi/download/update/'
 NUM_UPDATER = 4
 NUM_DOWNLOADER = 4
-
-out_lock = Lock()
 
 class DownloadJob(Thread):
 	def __init__(self, links):
@@ -24,7 +23,8 @@ class DownloadJob(Thread):
 	def run(self):
 		for link in self.links:
 			filename, url = DOWNLOAD_DIR + link[1] + ".torrent", link[2] 
-			download(url, filename, 10)
+			download(url, filename)
+			os.chmod(filename, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
 class UpdaterJob(Thread):
 	def __init__(self, db):
@@ -37,12 +37,8 @@ class UpdaterJob(Thread):
 		
 		for series, val in self.db.items():
 			url, pattern, last = val[0], val[1], val[2]
-			
-			out_lock.acquire()
-			print "Checking", series + "..."
-			out_lock.release()
-			
-			feeds = fetch(url, pattern, 10)
+
+			feeds = fetch(url, pattern)
 			
 			if (feeds):
 				n = 0
@@ -52,26 +48,12 @@ class UpdaterJob(Thread):
 							
 				if (n != 0):
 					self.updates[series] = [None, None, feeds[0]['name']]
-					
-					out_lock.acquire()
-					print n, "updates found for", series, ":"
-					for i in range(n):
-						print "   ", feeds[i]['name']
-						
-					out_lock.release()
-				else:
-					print "no updates found for", series
-			else:
-				out_lock.acquire()
-				print "Connection error on checking", series
-				out_lock.release()
 
 
 def db_updates(db, links, updates):
 	
 	db.update(updates) # update `series` table
 	
-	"""
 	# update `updates` table
 	conn = db.connect()
 	conn.execute('CREATE TABLE IF NOT EXISTS updates (id_update INTEGER PRIMARY KEY AUTOINCREMENT, series_name TEXT NOT NULL, filename TEXT NOT NULL, url TEXT NOT NULL, pubdate TEXT NOT NULL)')
@@ -79,7 +61,6 @@ def db_updates(db, links, updates):
 	conn.executemany('INSERT INTO updates(series_name, filename, url, pubdate) VALUES (?, ?, ?, ?)', links)
 	conn.commit()
 	db.close()
-	"""
 	
 	# divide .torrent downloads into NUM_DOWNLOADER threads
 	
@@ -138,15 +119,9 @@ def update(db):
 if __name__ == "__main__":
 	db = NyaaSQLiteDB(DBNAME)
 	links, updates = update(db)
-	print
 	
 	if (links):
-		print len(links), "new updates found, download all? [y/n]",
-		var = raw_input()
-		if var in ['y', 'Y']:
-			db_updates(db, links, updates)
-		else:
-			db.close()
+		print len(links), "new updates found"
+		db_updates(db, links, updates)
 	else:
-		print "no updates found"
 		db.close()

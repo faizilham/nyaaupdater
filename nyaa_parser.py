@@ -13,18 +13,29 @@ import re
 from xml.etree import ElementTree
 
 # download from url
-def download(url, filename):
-	urllib.urlretrieve(url, filename)
+def download(url, filename, retry_num=5):
+	n = 0
+	while n < retry_num:
+		try:
+			urllib.urlretrieve(url, filename)
+			return True
+		except:
+			n = n + 1
+	return False
 
 # fetch from url, return list of feed dictionary {name, link, page, desc, date}
-def fetch(url, pattern):
-	try:
-		handler = urllib2.urlopen(url)
-		content = handler.read()
-		return parse(content, pattern)
-		
-	except IOError:
-		print "Connection Error"
+def fetch(url, pattern, retry_num=5):
+	n = 0
+	while n < retry_num: 
+		try:
+			handler = urllib2.urlopen(url)
+			content = handler.read()
+			return parse(content, pattern)
+
+		except:
+			n = n + 1
+			
+	return None
 
 # parse xml data and build the list of feed dictionary
 def parse(raw_xml_string, pattern):
