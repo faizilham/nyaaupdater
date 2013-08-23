@@ -13,8 +13,9 @@ DBNAME = 'nyaa_checklist.db'
 DOWNLOAD_DIR = ''
 NUM_UPDATER = 4
 NUM_DOWNLOADER = 4
+VERBOSE = False
 
-out_lock = Lock()
+job_lock = Lock()
 
 class DownloadJob(Thread):
 	def __init__(self, links):
@@ -25,18 +26,18 @@ class DownloadJob(Thread):
 		for link in self.links:
 			filename, url = DOWNLOAD_DIR + link[1] + ".torrent", link[2]
 			
-			out_lock.acquire()
+			job_lock.acquire()
 			print "downloading", link[1]
-			out_lock.release()
+			job_lock.release()
 			
 			if download(url, filename, 20):
-				out_lock.acquire()
+				job_lock.acquire()
 				print "finished downloading", link[1]
-				out_lock.release()
+				job_lock.release()
 			else:
-				out_lock.acquire()
+				job_lock.acquire()
 				print "connection error on downloading", link[1]
-				out_lock.release()
+				job_lock.release()
 
 class UpdaterJob(Thread):
 	def __init__(self, db):
@@ -47,17 +48,29 @@ class UpdaterJob(Thread):
 		self.links = []
 		self.updates = {}
 		
-		for series, val in self.db.items():
+		while len(self.db) > 0:
+			
+			# get an unchecked series
+			job_lock.acquire()
+			if len(self.db) > 0: 
+				series, val = self.db.popitem()
+			else: break
+			job_lock.release()
+			
 			url, pattern, last = val[0], val[1], val[2]
 			
-			out_lock.acquire()
+			job_lock.acquire()
 			print "checking", series + "..."
-			out_lock.release()
+			job_lock.release()
 			
-			feeds = fetch(url, pattern, retry_num=10, info_name=series)
+			# try get the online feeds
+			feeds = fetch(url, pattern, retry_num=7, info_name=(series if VERBOSE else None))
 			
-			if (feeds):
+			
+			if (feeds): # if success
 				n = 0
+				
+				# check whether new links exist
 				while(n < len(feeds) and feeds[n]['name'] != last):
 					self.links.append((series, feeds[n]['name'], feeds[n]['link'], feeds[n]['date']))
 					n = n + 1
@@ -65,33 +78,27 @@ class UpdaterJob(Thread):
 				if (n != 0):
 					self.updates[series] = [None, None, feeds[0]['name']]
 					
-					out_lock.acquire()
+					job_lock.acquire()
 					print n, "updates found for", series, ":"
 					for i in range(n):
 						print "    +", feeds[i]['name']
 						
-					out_lock.release()
+					job_lock.release()
 				else:
 					print "no update found for", series
-			else:
-				out_lock.acquire()
-				print "connection error on checking", series
-				out_lock.release()
+					
+			else: # if not success after several retry
+			
+				# assume unchecked
+				job_lock.acquire()
+				print "connection error on checking {0}, retrying later".format(series)
+				self.db[series] = val
+				job_lock.release()
 
 
 def db_updates(db, links, updates):
 	
 	db.update(updates) # update `series` table
-	
-	"""
-	# update `updates` table
-	conn = db.connect()
-	conn.execute('CREATE TABLE IF NOT EXISTS updates (id_update INTEGER PRIMARY KEY AUTOINCREMENT, series_name TEXT NOT NULL, filename TEXT NOT NULL, url TEXT NOT NULL, pubdate TEXT NOT NULL)')
-	
-	conn.executemany('INSERT INTO updates(series_name, filename, url, pubdate) VALUES (?, ?, ?, ?)', links)
-	conn.commit()
-	db.close()
-	"""
 	
 	# divide .torrent downloads into NUM_DOWNLOADER threads
 	
@@ -120,23 +127,13 @@ def db_updates(db, links, updates):
 def update(db):
 	data = db.load()
 	
-	# divide check series updates into NUM_UPDATER threads
+	temp, jobs = data.copy(), []
 	
-	item_per_job = len(data) / NUM_UPDATER + (0 if len(data) % NUM_UPDATER == 0 else 1)
+	for i in range(NUM_UPDATER):
+		job = UpdaterJob(temp)
+		jobs.append(job)
+		job.start()
 	
-	temp, jobs = {}, []
-	n, total = 0, 0
-	for key, value in data.items():
-		temp[key] = value
-		n = n + 1
-		total = total + 1
-		if (n==item_per_job or total == len(data)):
-			n = 0
-			job = UpdaterJob(temp)
-			jobs.append(job)
-			job.start()
-			temp = {}
-				
 	links, updates = [], {}
 	for job in jobs:
 		job.join()

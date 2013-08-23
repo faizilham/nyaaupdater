@@ -32,9 +32,10 @@ def fetch(url, pattern, retry_num=5, info_name=None):
 			content = handler.read()
 			return parse(content, pattern)
 
-		except:
+		except Exception as e:
 			n = n + 1
-			if info_name: print "retry #{0} for {1}".format(n, info_name)
+			if info_name: 
+				print "***{2} -- retry #{0} for {1}".format(n, info_name,str(e))
 			
 	return None
 
