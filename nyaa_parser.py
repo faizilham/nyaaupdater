@@ -24,7 +24,7 @@ def download(url, filename, retry_num=5):
 	return False
 
 # fetch from url, return list of feed dictionary {name, link, page, desc, date}
-def fetch(url, pattern, retry_num=5):
+def fetch(url, pattern, retry_num=5, info_name=None):
 	n = 0
 	while n < retry_num: 
 		try:
@@ -34,6 +34,7 @@ def fetch(url, pattern, retry_num=5):
 
 		except:
 			n = n + 1
+			if info_name: print "retry #{0} for {1}".format(n, info_name)
 			
 	return None
 
